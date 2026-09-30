@@ -235,18 +235,16 @@
         let connectedPeersSet = new Set();
         let qrCodeObj = null;
 
-        // PeerJS Configuration with STUN and TURN relay support
+        // Expanded Multi-ICE Server configuration for STUN and TURN relays
         const peerConfig = {
             config: {
                 iceServers: [
-                    // Public STUN Servers
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun2.l.google.com:19302' },
                     { urls: 'stun:stun3.l.google.com:19302' },
                     { urls: 'stun:stun4.l.google.com:19302' },
-                    
-                    // TURN Relay Servers (Cross-network, cellular data, firewall support)
+                    { urls: 'stun:global.stun.twilio.com:3478' },
                     {
                         urls: "turn:openrelay.metered.ca:80",
                         username: "openrelayproject",
@@ -262,7 +260,8 @@
                         username: "openrelayproject",
                         credential: "openrelayproject"
                     }
-                ]
+                ],
+                iceCandidatePoolSize: 10
             }
         };
 
@@ -345,7 +344,7 @@
 
             peer.on('open', id => {
                 myPeerId = id;
-                document.getElementById('status-tag').innerText = "Host (Room Owner)";
+                document.getElementById('status-tag').innerText = "Host";
                 setupPeerListeners();
             });
 
@@ -385,7 +384,7 @@
         }
 
         function connectToHost(hostId) {
-            const conn = peer.connect(hostId, { metadata: { name: myName } });
+            const conn = peer.connect(hostId, { metadata: { name: myName }, reliable: true });
             handleDataConnection(conn);
 
             const call = peer.call(hostId, localStream);
@@ -417,7 +416,7 @@
             });
 
             conn.on('open', () => {
-                if(myPeerId.startsWith('host-')) {
+                if(myPeerId && myPeerId.startsWith('host-')) {
                     const peerList = Array.from(connectedPeersSet);
                     conn.send({ type: 'peer-list', peers: peerList });
                 }
@@ -431,7 +430,7 @@
         }
 
         function callOtherPeer(targetPeerId) {
-            const conn = peer.connect(targetPeerId, { metadata: { name: myName } });
+            const conn = peer.connect(targetPeerId, { metadata: { name: myName }, reliable: true });
             handleDataConnection(conn);
 
             const call = peer.call(targetPeerId, localStream);
@@ -459,11 +458,13 @@
                 video.playsInline = true;
                 video.srcObject = stream;
 
-                video.play().catch(err => {
-                    console.log("Autoplay unblock retry:", err);
-                    video.muted = true;
-                    video.play();
-                });
+                video.onloadedmetadata = () => {
+                    video.play().catch(err => {
+                        console.log("Unmuting remote stream for autoplay:", err);
+                        video.muted = true;
+                        video.play();
+                    });
+                };
 
                 const tag = document.createElement('div');
                 tag.className = 'absolute bottom-2 left-2 bg-black/60 backdrop-blur px-2.5 py-1 rounded-md text-[11px]';
@@ -494,8 +495,7 @@
             const isMobile = window.innerWidth < 640;
 
             if(isMobile) {
-                if(count === 1) grid.className = "video-grid w-full grid-cols-1";
-                else grid.className = "video-grid w-full grid-cols-1 auto-rows-fr";
+                grid.className = "video-grid w-full grid-cols-1 auto-rows-fr";
             } else {
                 if(count <= 1) grid.className = "video-grid w-full grid-cols-1";
                 else if(count === 2) grid.className = "video-grid w-full grid-cols-1 md:grid-cols-2";
@@ -547,7 +547,9 @@
 
             appendChatMessage('You', msg);
             Object.values(dataConns).forEach(conn => {
-                conn.send({ type: 'chat', sender: myName, message: msg });
+                if(conn.open) {
+                    conn.send({ type: 'chat', sender: myName, message: msg });
+                }
             });
             input.value = '';
         }
