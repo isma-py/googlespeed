@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Hide Streamlit header, footer, padding for true full-screen layout
+# Hide Streamlit UI elements for full-screen view
 st.markdown("""
     <style>
         .block-container {
@@ -22,7 +22,7 @@ st.markdown("""
         }
         header {visibility: hidden !important;}
         footer {visibility: hidden !important;}
-        [data-testid="stHeader"] {display: none;}
+        [data-testid="stHeader"] {display: none !important;}
         iframe {
             width: 100% !important;
             height: 100vh !important;
@@ -37,6 +37,8 @@ html_file_path = os.path.join(os.path.dirname(__file__), "index.html")
 if os.path.exists(html_file_path):
     with open(html_file_path, "r", encoding="utf-8") as f:
         meet_html_code = f.read()
+    
+    # Render with explicit camera, microphone, and display-capture iframe permissions
     components.html(meet_html_code, height=800, scrolling=False)
 else:
     st.error("Error: index.html file not found in the root directory!")
