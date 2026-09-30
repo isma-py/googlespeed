@@ -2,7 +2,7 @@ import os
 import streamlit as st
 import streamlit.components.v1 as components
 
-# Page config
+# Page configuration
 st.set_page_config(
     page_title="Google Meet Clone",
     page_icon="📹",
@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Hide Streamlit UI elements for full-screen view
+# Hide Streamlit chrome & enforce full-viewport iframe
 st.markdown("""
     <style>
         .block-container {
@@ -31,14 +31,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Read HTML code from index.html
+# Path to index.html
 html_file_path = os.path.join(os.path.dirname(__file__), "index.html")
 
 if os.path.exists(html_file_path):
     with open(html_file_path, "r", encoding="utf-8") as f:
         meet_html_code = f.read()
     
-    # Render with explicit camera, microphone, and display-capture iframe permissions
+    # Render with camera, mic, and screen capture permissions enabled
     components.html(meet_html_code, height=800, scrolling=False)
 else:
-    st.error("Error: index.html file not found in the root directory!")
+    st.error("Error: index.html file was not found in the project root directory!")
